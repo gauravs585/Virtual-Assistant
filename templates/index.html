@@ -1,0 +1,636 @@
+<!-- templates/index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pratik - AI Virtual Assistant</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <!-- Add marked.js for Markdown parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+    <style>
+        .chat-container {
+            height: calc(100vh - 200px);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        }
+        
+        .message-bubble {
+            animation: slideIn 0.3s ease-out;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .typing-indicator {
+            display: none;
+        }
+        
+        .typing-indicator.show {
+            display: flex;
+            animation: pulse 1.5s infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+        
+        .voice-button {
+            transition: all 0.3s ease;
+        }
+        
+        .voice-button:hover {
+            transform: scale(1.1);
+        }
+        
+        .voice-button.recording {
+            background: #ef4444;
+            animation: recordingPulse 1s infinite;
+        }
+        
+        @keyframes recordingPulse {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        
+        .floating-action {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
+        }
+        
+        .capabilities-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 1rem;
+        }
+        
+        .glass-effect {
+            background: rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        
+        .gradient-text {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Styles for rendered markdown content */
+        .message-content strong {
+            font-weight: bold;
+        }
+        
+        .message-content em {
+            font-style: italic;
+        }
+        
+        .message-content ul {
+            list-style-type: disc;
+            margin-left: 20px;
+        }
+        
+        .message-content ol {
+            list-style-type: decimal;
+            margin-left: 20px;
+        }
+        
+        .message-content li {
+            margin: 4px 0;
+        }
+        
+        .message-content p {
+            margin: 8px 0;
+        }
+        
+        .message-content h1, .message-content h2, .message-content h3 {
+            font-weight: bold;
+            margin: 12px 0 8px 0;
+        }
+        
+        .message-content code {
+            background: rgba(0, 0, 0, 0.1);
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body class="bg-gray-100 font-sans">
+    <!-- Header -->
+    <header class="bg-white shadow-lg">
+        <div class="container mx-auto px-4 py-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center">
+                        <i class="fas fa-robot text-white text-lg"></i>
+                    </div>
+                    <div>
+                        <h1 class="text-2xl font-bold gradient-text">Pratik AI</h1>
+                        <p class="text-sm text-gray-600">Your Intelligent Virtual Assistant</p>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button id="capabilitiesBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-info-circle mr-2"></i>Capabilities
+                    </button>
+                    <button id="historyBtn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg transition-colors">
+                        <i class="fas fa-history mr-2"></i>History
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Chat Interface -->
+    <div class="container mx-auto px-4 py-6">
+        <div class="max-w-4xl mx-auto">
+            <!-- Chat Container -->
+            <div id="chatContainer" class="chat-container rounded-xl shadow-2xl overflow-hidden mb-6">
+                <div class="h-full flex flex-col">
+                    <!-- Messages Area -->
+                    <div id="messagesArea" class="flex-1 overflow-y-auto p-6 space-y-4">
+                        <!-- Welcome Message -->
+                        <div class="message-bubble bg-white bg-opacity-90 rounded-lg p-4 max-w-md">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-white text-sm"></i>
+                                </div>
+                                <div>
+                                    <p class="text-gray-800">👋 Hello! I'm Pratik, your AI virtual assistant. I can help you with weather, news, reminders, translations, jokes, and much more!</p>
+                                    <p class="text-sm text-gray-600 mt-2">Try saying "What can you do?" to see all my capabilities.</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Typing Indicator -->
+                    <div id="typingIndicator" class="typing-indicator px-6 pb-2">
+                        <div class="bg-white bg-opacity-70 rounded-lg p-3 max-w-xs">
+                            <div class="flex space-x-1">
+                                <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></div>
+                                <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.1s"></div>
+                                <div class="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style="animation-delay: 0.2s"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Input Area -->
+            <div class="bg-white rounded-xl shadow-lg p-4">
+                <div class="flex items-center space-x-4">
+                    <!-- Voice Button -->
+                    <button id="voiceBtn" class="voice-button w-12 h-12 bg-red-500 hover:bg-red-600 text-white rounded-full flex items-center justify-center transition-all">
+                        <i class="fas fa-microphone"></i>
+                    </button>
+                    
+                    <!-- Text Input -->
+                    <div class="flex-1">
+                        <input 
+                            type="text" 
+                            id="messageInput" 
+                            placeholder="Type your message or click the microphone to speak..."
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        >
+                    </div>
+                    
+                    <!-- Send Button -->
+                    <button id="sendBtn" class="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-lg transition-colors">
+                        <i class="fas fa-paper-plane mr-2"></i>Send
+                    </button>
+                </div>
+                
+                <!-- Quick Actions -->
+                <div class="mt-4 flex flex-wrap gap-2">
+                    <button class="quick-action bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition-colors" data-command="What's the weather?">
+                        🌤️ Weather
+                    </button>
+                    <button class="quick-action bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition-colors" data-command="Tell me a joke">
+                        😄 Joke
+                    </button>
+                    <button class="quick-action bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition-colors" data-command="Get me some news">
+                        📰 News
+                    </button>
+                    <button class="quick-action bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition-colors" data-command="Tell me a random fact">
+                        🤓 Fact
+                    </button>
+                    <button class="quick-action bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition-colors" data-command="Start a workout">
+                        💪 Workout
+                    </button>
+                    <button class="quick-action bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1 rounded-full text-sm transition-colors" data-command="What can you do?">
+                        ❓ Help
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Capabilities Modal -->
+    <div id="capabilitiesModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-4xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold gradient-text">My Capabilities</h2>
+                        <button id="closeCapabilities" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="capabilitiesContent" class="capabilities-grid">
+                        <!-- Capabilities will be loaded here -->
+                    </div>
+                    
+                    <div class="mt-6">
+                        <h3 class="text-lg font-semibold mb-3">Sample Commands:</h3>
+                        <div id="sampleCommands" class="flex flex-wrap gap-2">
+                            <!-- Sample commands will be loaded here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- History Modal -->
+    <div id="historyModal" class="fixed inset-0 bg-black bg-opacity-50 z-50 hidden">
+        <div class="flex items-center justify-center min-h-screen p-4">
+            <div class="bg-white rounded-xl max-w-2xl w-full max-h-screen overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex items-center justify-between mb-6">
+                        <h2 class="text-2xl font-bold gradient-text">Conversation History</h2>
+                        <button id="closeHistory" class="text-gray-500 hover:text-gray-700">
+                            <i class="fas fa-times text-xl"></i>
+                        </button>
+                    </div>
+                    
+                    <div id="historyContent" class="space-y-4">
+                        <!-- History will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Indicator -->
+    <div id="statusIndicator" class="floating-action">
+        <div class="bg-green-500 text-white px-4 py-2 rounded-full hidden">
+            <i class="fas fa-check mr-2"></i><span>Ready</span>
+        </div>
+    </div>
+
+    <script>
+        class VirtualAssistant {
+            constructor() {
+                this.isRecording = false;
+                this.recognition = null;
+                this.init();
+            }
+            
+            init() {
+                this.setupEventListeners();
+                this.setupSpeechRecognition();
+                this.loadCapabilities();
+            }
+            
+            setupEventListeners() {
+                // Send message
+                document.getElementById('sendBtn').addEventListener('click', () => this.sendMessage());
+                document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+                
+                // Voice recognition
+                document.getElementById('voiceBtn').addEventListener('click', () => this.toggleVoiceRecognition());
+                
+                // Quick actions
+                document.querySelectorAll('.quick-action').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const command = e.target.getAttribute('data-command');
+                        this.sendMessage(command);
+                    });
+                });
+                
+                // Modal controls
+                document.getElementById('capabilitiesBtn').addEventListener('click', () => this.showCapabilities());
+                document.getElementById('historyBtn').addEventListener('click', () => this.showHistory());
+                document.getElementById('closeCapabilities').addEventListener('click', () => this.hideModal('capabilitiesModal'));
+                document.getElementById('closeHistory').addEventListener('click', () => this.hideModal('historyModal'));
+                
+                // Close modals on backdrop click
+                document.getElementById('capabilitiesModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'capabilitiesModal') this.hideModal('capabilitiesModal');
+                });
+                document.getElementById('historyModal').addEventListener('click', (e) => {
+                    if (e.target.id === 'historyModal') this.hideModal('historyModal');
+                });
+            }
+            
+            setupSpeechRecognition() {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+                    this.recognition = new SpeechRecognition();
+                    this.recognition.continuous = false;
+                    this.recognition.interimResults = false;
+                    this.recognition.lang = 'en-US';
+                    
+                    this.recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        document.getElementById('messageInput').value = transcript;
+                        this.sendMessage();
+                    };
+                    
+                    this.recognition.onend = () => {
+                        this.isRecording = false;
+                        this.updateVoiceButton();
+                    };
+                    
+                    this.recognition.onerror = (event) => {
+                        console.error('Speech recognition error:', event.error);
+                        this.isRecording = false;
+                        this.updateVoiceButton();
+                    };
+                } else {
+                    console.warn('Speech recognition not supported');
+                    document.getElementById('voiceBtn').style.display = 'none';
+                }
+            }
+            
+            toggleVoiceRecognition() {
+                if (!this.recognition) return;
+                
+                if (this.isRecording) {
+                    this.recognition.stop();
+                } else {
+                    this.recognition.start();
+                    this.isRecording = true;
+                    this.updateVoiceButton();
+                }
+            }
+            
+            updateVoiceButton() {
+                const voiceBtn = document.getElementById('voiceBtn');
+                const icon = voiceBtn.querySelector('i');
+                
+                if (this.isRecording) {
+                    voiceBtn.classList.add('recording');
+                    icon.className = 'fas fa-stop';
+                } else {
+                    voiceBtn.classList.remove('recording');
+                    icon.className = 'fas fa-microphone';
+                }
+            }
+            
+            async sendMessage(message = null) {
+                const messageInput = document.getElementById('messageInput');
+                const userMessage = message || messageInput.value.trim();
+                
+                if (!userMessage) return;
+                
+                // Clear input
+                messageInput.value = '';
+                
+                // Add user message to chat
+                this.addMessage(userMessage, 'user');
+                
+                // Show typing indicator
+                this.showTypingIndicator();
+                
+                try {
+                    const response = await fetch('/api/chat', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ message: userMessage })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        this.addMessage(data.response, 'assistant');
+                        this.speakMessage(data.response);
+                    } else {
+                        this.addMessage(`Error: ${data.error}`, 'error');
+                    }
+                } catch (error) {
+                    this.addMessage('Sorry, I encountered an error. Please try again.', 'error');
+                    console.error('Error:', error);
+                } finally {
+                    this.hideTypingIndicator();
+                }
+            }
+            
+            addMessage(message, type) {
+                const messagesArea = document.getElementById('messagesArea');
+                const messageDiv = document.createElement('div');
+                messageDiv.className = 'message-bubble';
+                
+                if (type === 'user') {
+                    messageDiv.innerHTML = `
+                        <div class="flex justify-end">
+                            <div class="bg-blue-500 text-white rounded-lg p-4 max-w-md ml-auto">
+                                <div class="message-content">${this.formatMessage(message)}</div>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    const bgColor = type === 'error' ? 'bg-red-100' : 'bg-white bg-opacity-90';
+                    const textColor = type === 'error' ? 'text-red-800' : 'text-gray-800';
+                    
+                    messageDiv.innerHTML = `
+                        <div class="${bgColor} rounded-lg p-4 max-w-md">
+                            <div class="flex items-start space-x-3">
+                                <div class="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-500 rounded-full flex items-center justify-center flex-shrink-0">
+                                    <i class="fas fa-robot text-white text-sm"></i>
+                                </div>
+                                <div class="flex-1">
+                                    <div class="message-content ${textColor}">${this.formatMessage(message)}</div>
+                                    <p class="text-xs text-gray-500 mt-1">${new Date().toLocaleTimeString()}</p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                }
+                
+                messagesArea.appendChild(messageDiv);
+                messagesArea.scrollTop = messagesArea.scrollHeight;
+            }
+            
+            formatMessage(message) {
+                // Use marked.js to convert Markdown to HTML
+                if (typeof marked !== 'undefined') {
+                    // Configure marked for safe HTML rendering
+                    marked.setOptions({
+                        breaks: true,
+                        gfm: true,
+                        sanitize: false,
+                        smartLists: true,
+                        smartypants: false
+                    });
+                    
+                    return marked.parse(message);
+                } else {
+                    // Fallback: Basic markdown conversion without external library
+                    return this.basicMarkdownToHtml(message);
+                }
+            }
+            
+            basicMarkdownToHtml(text) {
+                // Basic markdown to HTML conversion as fallback
+                return text
+                    // Bold text: **text** or __text__
+                    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
+                    .replace(/__(.*?)__/g, '<strong>$1</strong>')
+                    // Italic text: *text* or _text_
+                    .replace(/(?<!\*)\*([^\*]+?)\*(?!\*)/g, '<em>$1</em>')
+                    .replace(/(?<!_)_([^_]+?)_(?!_)/g, '<em>$1</em>')
+                    // Line breaks
+                    .replace(/\n/g, '<br>')
+                    // Simple list items (basic support)
+                    .replace(/^\- (.+)$/gm, '<li>$1</li>')
+                    .replace(/(<li>.*<\/li>)/s, '<ul>$1</ul>');
+            }
+            
+            showTypingIndicator() {
+                document.getElementById('typingIndicator').classList.add('show');
+                document.getElementById('messagesArea').scrollTop = document.getElementById('messagesArea').scrollHeight;
+            }
+            
+            hideTypingIndicator() {
+                document.getElementById('typingIndicator').classList.remove('show');
+            }
+            
+            speakMessage(message) {
+                if ('speechSynthesis' in window) {
+                    // Remove emojis and markdown-like formatting for speech
+                    const cleanMessage = message
+                        .replace(/[🌤️📰😄🤓💪❓🔍🎵🎬📚🧘‍♀️💭🧠📅📧🔐🎨🌡️🔄📊💰📈📉⏰📝🕐🧮🦩🐙🍯🦈🌟🐨🌙🐧🎵🧠✨🌟💫🌅🚀💪🎯🌈🔥🦋]/g, '')
+                        .replace(/\*\*(.*?)\*\*/g, '$1') // Remove bold markers
+                        .replace(/\*(.*?)\*/g, '$1')     // Remove italic markers
+                        .replace(/\n/g, ' ')             // Replace line breaks with spaces
+                        .replace(/<[^>]*>/g, '');        // Remove HTML tags
+                    
+                    const utterance = new SpeechSynthesisUtterance(cleanMessage);
+                    utterance.rate = 0.9;
+                    utterance.pitch = 1;
+                    utterance.volume = 0.8;
+                    
+                    speechSynthesis.speak(utterance);
+                }
+            }
+            
+            async loadCapabilities() {
+                try {
+                    const response = await fetch('/api/capabilities');
+                    const data = await response.json();
+                    this.capabilities = data;
+                } catch (error) {
+                    console.error('Failed to load capabilities:', error);
+                }
+            }
+            
+            showCapabilities() {
+                if (!this.capabilities) return;
+                
+                const content = document.getElementById('capabilitiesContent');
+                const sampleCommands = document.getElementById('sampleCommands');
+                
+                // Clear existing content
+                content.innerHTML = '';
+                sampleCommands.innerHTML = '';
+                
+                // Add capability categories
+                Object.entries(this.capabilities.categories).forEach(([category, items]) => {
+                    const categoryDiv = document.createElement('div');
+                    categoryDiv.className = 'glass-effect rounded-lg p-4';
+                    categoryDiv.innerHTML = `
+                        <h3 class="font-semibold text-lg mb-3 gradient-text">${category}</h3>
+                        <ul class="space-y-1">
+                            ${items.map(item => `<li class="text-gray-700">• ${item}</li>`).join('')}
+                        </ul>
+                    `;
+                    content.appendChild(categoryDiv);
+                });
+                
+                // Add sample commands
+                this.capabilities.sample_commands.forEach(command => {
+                    const button = document.createElement('button');
+                    button.className = 'bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded-full text-sm transition-colors cursor-pointer';
+                    button.textContent = command;
+                    button.addEventListener('click', () => {
+                        this.hideModal('capabilitiesModal');
+                        this.sendMessage(command);
+                    });
+                    sampleCommands.appendChild(button);
+                });
+                
+                document.getElementById('capabilitiesModal').classList.remove('hidden');
+            }
+            
+            async showHistory() {
+                try {
+                    const response = await fetch('/api/history');
+                    const history = await response.json();
+                    
+                    const content = document.getElementById('historyContent');
+                    content.innerHTML = '';
+                    
+                    if (history.length === 0) {
+                        content.innerHTML = '<p class="text-gray-500 text-center">No conversation history yet.</p>';
+                    } else {
+                        history.forEach(item => {
+                            const historyItem = document.createElement('div');
+                            historyItem.className = 'border-l-4 border-blue-500 pl-4 py-2';
+                            
+                            const timestamp = new Date(item.timestamp).toLocaleString();
+                            const content_text = item.user_input || item.assistant_response;
+                            const type = item.user_input ? 'You' : 'Pratik';
+                            const typeClass = item.user_input ? 'text-blue-600' : 'text-purple-600';
+                            
+                            historyItem.innerHTML = `
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <p class="font-medium ${typeClass}">${type}:</p>
+                                        <div class="text-gray-700 mt-1 message-content">${this.formatMessage(content_text)}</div>
+                                    </div>
+                                    <span class="text-xs text-gray-500 ml-4">${timestamp}</span>
+                                </div>
+                            `;
+                            
+                            content.appendChild(historyItem);
+                        });
+                    }
+                    
+                    document.getElementById('historyModal').classList.remove('hidden');
+                } catch (error) {
+                    console.error('Failed to load history:', error);
+                }
+            }
+            
+            hideModal(modalId) {
+                document.getElementById(modalId).classList.add('hidden');
+            }
+        }
+        
+        // Initialize the assistant when the page loads
+        document.addEventListener('DOMContentLoaded', () => {
+            new VirtualAssistant();
+        });
+    </script>
+</body>
+</html>
