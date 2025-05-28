@@ -1,5 +1,4 @@
 from flask import Flask, render_template, request, jsonify, session
-import speech_recognition as sr
 import pyttsx3
 import requests
 import random
@@ -12,6 +11,12 @@ from googletrans import Translator
 import openai
 import yfinance as yf
 from flask_session import Session
+try:
+    import speech_recognition as sr
+    print("Speech recognition loaded successfully")
+except ImportError:
+    print("Speech recognition not available")
+    sr = None
 
 app = Flask(__name__)
 app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'your-secret-key-here')
